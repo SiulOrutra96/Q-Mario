@@ -27,5 +27,5 @@ Este es mi proyecto de tesina, es un algoritmo que combina Q-learning y una Red 
 
 - El entorno está listo, ahora solo hay que clonar el proyecto y correrlo
 
-**aun no existe el archivo**
+*aun no existe el archivo*
 `q-mario.py`
