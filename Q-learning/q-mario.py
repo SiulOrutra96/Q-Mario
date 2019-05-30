@@ -22,43 +22,103 @@ from PIL import Image
 
 def cargarTablaQ():
     tablaQ = {}
+    archivo = open(rutaQ, "r")
+    
+    for linea in archivo:
+        estado = ""
+        i = 1
+        for caracter in linea:
+            if caracter == "|":
+                break
+
+            estado += caracter
+            i += 1
+        
+        tablaQ[estado] = []
+        valor = ""
+        for caracter in linea[i:]:
+            if caracter == "|":
+                tablaQ[estado].append(float(valor))
+                valor = ""
+            else:
+                valor += caracter
+
+    archivo.close()
+
     return tablaQ
 
 def guardarTablaQ(tablaQ):
-    return 1
+    archivo = open(rutaQ, "w")
+    for estado in tablaQ:
+        archivo.write(estado + "|")
+        for valor in tablaQ[estado]:
+            archivo.write(str(valor) + "|")
+        archivo.write("\n")
+    
+    archivo.close()
 
 def crearEstado(tablaQ, estado):
     tablaQ[estado] = []
     for i in range(7):
         tablaQ[estado].append(0.5)
 
-def procesarCaptura(captura):
-    estado = aplanarCaptura(captura)
-    # print("estado: ", estado)
-    # input()
-    # guardarCaptura()
-    # input()
+def procesarCaptura(captura, posx, posy, index = 0):
+    capturaCortada = cortarCaptura(captura, posx, posy)
+    capturaCortada = achicarCaptura(capturaCortada)
+    estado = aplanarCaptura(capturaCortada)
+    # guardarCaptura(capturaCortada, index)
     return estado
 
+def cortarCaptura(captura, posx, posy):
+    imagen = Image.fromarray(captura)
+    # imagen.show()
+
+    ancho, alto = imagen.size   # Obtener las dimensiones
+    left = posx - 20
+    right = left + 64
+    top = alto - posy - 5
+    bottom = top + 64
+    imagenCortada = imagen.crop((left, top, right, bottom))
+    # imagenCortada.show()
+
+    imagenArray = np.array(imagenCortada)
+
+    return imagenArray
+
+def achicarCaptura(captura):
+    FACTOR_REDUCCION = 4
+    imagen = Image.fromarray(captura)
+
+    ancho, alto = imagen.size
+    nuevoAncho = int(ancho/FACTOR_REDUCCION)
+    nuevoAlto = int(alto/FACTOR_REDUCCION)
+
+    capturaChica = imagen.resize((nuevoAncho, nuevoAlto), Image.LANCZOS)
+    # capturaChica.show()
+
+    imagenArray = np.array(capturaChica)
+
+    return imagenArray
+
 def aplanarCaptura(captura):
-    vector = np.matrix.flatten(captura)
+    array = np.matrix.flatten(captura)
     cadena = ""
-    for pixel in vector:
+    for pixel in array:
         cadena += str(pixel) + ":"
     
     return cadena
 
-def guardarCaptura(captura):
+def guardarCaptura(captura, index):
     imagen = Image.fromarray(captura)
-    imagen.save("imagen.png")
-    imagen.show()
+    imagen.save("capturas/imagen" + str(index) + ".png")
+    # imagen.show()
 
 # ────────────────────────────────────────────────────────────────────────────────
 # Inicialización de variables
 # ────────────────────────────────────────────────────────────────────────────────
 
 # Ruta para guardar y cargar la tabla Q
-rutaQ = "/home/usuario/Documentos/tesina/Q-Mario/Q-learning/tablaQ.las"
+rutaQ = "/home/usuario/Documentos/tesina/Q-Mario/Q-learning/tablaQ2.las"
 
 # Se inicializa la tabla Q como un hash map
 # cada posicion en el hash representa un estado, cada estado contiene un vector de 7 posiciones
@@ -67,14 +127,14 @@ Q = {}
 
 # Si ya existe una tabla Q se carga
 if os.path.exists(rutaQ):
-    # TODO - cargar tabla
+    print("***CARGANDO TABLA Q***")
     Q = cargarTablaQ()
     print("***TABLA Q CARGADA***")
 
 # Cantidad de partidas a jugar
 partidas = 2000
 # Cada cuantas partidas se guarda la tabla Q
-guardarCada = 20
+guardarCada = 10
 
 # Parámetros para la actualización de la tabla
 alfa = 0.4
@@ -82,6 +142,9 @@ gama = 0.4
 
 # Factor que determina si se selecciona una acción aleatoria o no
 factorAleatoriedad = 5
+
+# Índice para la toma de capturas
+index = 0
 
 # Mundo, nivel y modo a jugar
 mundo = "1"
@@ -99,16 +162,17 @@ env = BinarySpaceToDiscreteSpaceEnv(env, SIMPLE_MOVEMENT)
 for partida in range(partidas):
     print("PARTIDA: ", partida)
 
-    if (partida % guardarCada == 0) or (partida == partidas - 1):
-        # TODO - guardar tabla
+    if (not partida == 0) and ((partida % guardarCada == 0) or (partida == partidas - 1)):
+        print("***GUARDANDO TABLA Q***")
         guardarTablaQ(Q)
         print("***TABLA Q GUARDADA***")
     
     # Se reinicia el entrorno cada vez que se empieza una nueva partida
     observacion = env.reset()
+    observacion, reward, muerto, info = env.step(0)
 
     # Se reinicia el estado actual
-    estadoActual = procesarCaptura(observacion)
+    estadoActual = procesarCaptura(observacion, info["x_pos"], info["y_pos"])
 
     # Si el estado actual no se encuentra en la tabla se guarda
     if not estadoActual in Q:
@@ -125,9 +189,12 @@ for partida in range(partidas):
     tiempoAnterior = 400
     estatusAnterior = "small"
     vidadAnterior = 2
-    centroPantalla = "no sé"
     recompensa = 0
     paso = -1
+    CONSTANTE_ANCLAJE = 85
+    puntoAnclaje = CONSTANTE_ANCLAJE
+    posXAct = 0
+    posXAnt = 40
 
     while (not muerto) and (not bandera):
         # Esto renderiza el entorno (lo muestra en pantalla)
@@ -146,6 +213,13 @@ for partida in range(partidas):
 
         # Se realiza la acción
         observacion, reward, muerto, info = env.step(accionSeleccionada)
+
+        # Mover punto de anclaje
+        posXAnt = posXAct
+        posXAct = info["x_pos"]
+        if posXAct > puntoAnclaje:
+            avance = posXAct - posXAnt
+            puntoAnclaje += avance
 
         bandera = info["flag_get"]
 
@@ -175,7 +249,6 @@ for partida in range(partidas):
                 recompensa -= 15
                 print("MUERTO :(")
             
-            print("recompensa: ", recompensa)
             # Se actualizan las variables de la recompensa
             puntajeAnterior = info["score"]
             tiempoAnterior = info["time"]
@@ -187,7 +260,9 @@ for partida in range(partidas):
             
             # Se toma captura de pantalla del estado actual y se proces
             # TODO - procesar captura
-            estadoActual = procesarCaptura(observacion)
+            parametroX = posXAct - puntoAnclaje + CONSTANTE_ANCLAJE
+            estadoActual = procesarCaptura(observacion, parametroX, info["y_pos"], index)
+            index += 1 
 
             # Si el estado actual no se encuentra en la tabla se guarda
             if not estadoActual in Q:
