@@ -64,9 +64,9 @@ def crearEstado(tablaQ, estado):
 
 def procesarCaptura(captura, posx, posy, index = 0):
     capturaCortada = cortarCaptura(captura, posx, posy)
-    capturaCortada = achicarCaptura(capturaCortada)
-    estado = aplanarCaptura(capturaCortada)
     # guardarCaptura(capturaCortada, index)
+    capturaChica = achicarCaptura(capturaCortada)
+    estado = aplanarCaptura(capturaChica)
     return estado
 
 def cortarCaptura(captura, posx, posy):
@@ -118,7 +118,7 @@ def guardarCaptura(captura, index):
 # ────────────────────────────────────────────────────────────────────────────────
 
 # Ruta para guardar y cargar la tabla Q
-rutaQ = "/home/usuario/Documentos/tesina/Q-Mario/Q-learning/tablaQ2.las"
+rutaQ = "/home/usuario/Documentos/tesina/Q-Mario/Q-learning/tablas-Q/tablaQ1.las"
 
 # Se inicializa la tabla Q como un hash map
 # cada posicion en el hash representa un estado, cada estado contiene un vector de 7 posiciones
