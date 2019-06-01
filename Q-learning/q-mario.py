@@ -75,9 +75,21 @@ def cortarCaptura(captura, posx, posy):
 
     ancho, alto = imagen.size   # Obtener las dimensiones
     left = posx - 20
+    if (left < 0):
+        left = 0
+    elif (left > 191):
+        left = 191
+
     right = left + 64
+
     top = alto - posy - 5
+    if (top < 0):
+        top = 0
+    elif (top > 175):
+        top = 175
+
     bottom = top + 64
+
     imagenCortada = imagen.crop((left, top, right, bottom))
     # imagenCortada.show()
 
@@ -116,20 +128,13 @@ def guardarCaptura(captura, index):
 # ────────────────────────────────────────────────────────────────────────────────
 # Inicialización de variables
 # ────────────────────────────────────────────────────────────────────────────────
+# Mundo, nivel y modo a jugar
+mundo = "1"
+nivel = "1"
+modo = "0"
 
-# Ruta para guardar y cargar la tabla Q
-rutaQ = "/home/usuario/Documentos/tesina/Q-Mario/Q-learning/tablas-Q/tablaQ1.las"
-
-# Se inicializa la tabla Q como un hash map
-# cada posicion en el hash representa un estado, cada estado contiene un vector de 7 posiciones
-# la n-ésima posición del vector contiene la calidad de realizar la n-ésima accion en ese estado
-Q = {}
-
-# Si ya existe una tabla Q se carga
-if os.path.exists(rutaQ):
-    print("***CARGANDO TABLA Q***")
-    Q = cargarTablaQ()
-    print("***TABLA Q CARGADA***")
+# Índice para la toma de capturas
+index = 26597
 
 # Cantidad de partidas a jugar
 partidas = 2000
@@ -143,13 +148,19 @@ gama = 0.4
 # Factor que determina si se selecciona una acción aleatoria o no
 factorAleatoriedad = 5
 
-# Índice para la toma de capturas
-index = 0
+# Ruta para guardar y cargar la tabla Q
+rutaQ = "/home/usuario/Documentos/tesina/Q-Mario/Q-learning/tablas-Q/tablaQ-M" + mundo + "N" + nivel + ".las"
 
-# Mundo, nivel y modo a jugar
-mundo = "1"
-nivel = "1"
-modo = "0"
+# Se inicializa la tabla Q como un hash map
+# cada posicion en el hash representa un estado, cada estado contiene un vector de 7 posiciones
+# la n-ésima posición del vector contiene la calidad de realizar la n-ésima accion en ese estado
+Q = {}
+
+# Si ya existe una tabla Q se carga
+if os.path.exists(rutaQ):
+    print("***CARGANDO TABLA: tablaQ-M" + mundo + "N" + nivel +"***")
+    Q = cargarTablaQ()
+    print("***TABLA Q CARGADA***")
 
 # Imicialización del entorno
 env = gym_super_mario_bros.make("SuperMarioBros-" + mundo + "-" + nivel + "-v" + modo)
@@ -163,7 +174,7 @@ for partida in range(partidas):
     print("PARTIDA: ", partida)
 
     if (not partida == 0) and ((partida % guardarCada == 0) or (partida == partidas - 1)):
-        print("***GUARDANDO TABLA Q***")
+        print("***GUARDANDO TABLA: tablaQ-M" + mundo + "N" + nivel +"***")
         guardarTablaQ(Q)
         print("***TABLA Q GUARDADA***")
     
@@ -191,7 +202,7 @@ for partida in range(partidas):
     vidadAnterior = 2
     recompensa = 0
     paso = -1
-    CONSTANTE_ANCLAJE = 85
+    CONSTANTE_ANCLAJE = 90
     puntoAnclaje = CONSTANTE_ANCLAJE
     posXAct = 0
     posXAnt = 40
@@ -214,11 +225,14 @@ for partida in range(partidas):
         # Se realiza la acción
         observacion, reward, muerto, info = env.step(accionSeleccionada)
 
+        # print("pos: ", info["x_pos"])
+        # input()
+
         # Mover punto de anclaje
         posXAnt = posXAct
         posXAct = info["x_pos"]
-        if posXAct > puntoAnclaje:
-            avance = posXAct - posXAnt
+        avance = posXAct - posXAnt
+        if posXAct > puntoAnclaje and avance > 0:
             puntoAnclaje += avance
 
         bandera = info["flag_get"]
